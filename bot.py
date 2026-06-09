@@ -58,86 +58,55 @@ async def join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def check_members(context: ContextTypes.DEFAULT_TYPE):
     users = load_users()
     print(f"\n🔍 Checking users... total saved: {len(users)}")
-
     if not users:
         return
-
     changed = False
-
     for user_id, data in list(users.items()):
         if data.get("left_message_sent") is True:
-            print(f"⏭️ Skip already sent: {user_id}")
             continue
-
         try:
             member = await context.bot.get_chat_member(
                 chat_id=VIP_CHANNEL_ID,
                 user_id=int(user_id)
             )
-
             status = member.status
             users[user_id]["last_status"] = status
             users[user_id]["last_checked"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             changed = True
-
             print(f"👤 {user_id} | {data.get('name')} | status = {status}")
-
             if status in ["left", "kicked"]:
                 try:
-                    await context.bot.send_message(
-                        chat_id=int(user_id),
-                        text=LEFT_MESSAGE
-                    )
+                    await context.bot.send_message(chat_id=int(user_id), text=LEFT_MESSAGE)
                     users[user_id]["left_message_sent"] = True
                     users[user_id]["left_detected_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     changed = True
                     print(f"📩 LEFT DM SENT: {user_id}")
-
                 except Exception as dm_error:
                     print(f"❌ LEFT DM FAILED {user_id}: {dm_error}")
-                    users[user_id]["dm_error"] = str(dm_error)
                     changed = True
-
         except Exception as e:
             err = str(e)
             print(f"⚠️ Check error {user_id}: {err}")
-
             users[user_id]["last_status"] = "error"
-            users[user_id]["last_error"] = err
             users[user_id]["last_checked"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             changed = True
-
             if "not found" in err.lower() or "participant" in err.lower():
                 try:
-                    await context.bot.send_message(
-                        chat_id=int(user_id),
-                        text=LEFT_MESSAGE
-                    )
+                    await context.bot.send_message(chat_id=int(user_id), text=LEFT_MESSAGE)
                     users[user_id]["left_message_sent"] = True
-                    users[user_id]["left_detected_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    changed = True
                     print(f"📩 LEFT DM SENT after not found: {user_id}")
-                    changed = True
                 except Exception as dm_error:
-                    print(f"❌ LEFT DM FAILED after not found {user_id}: {dm_error}")
-                    users[user_id]["dm_error"] = str(dm_error)
+                    print(f"❌ LEFT DM FAILED {user_id}: {dm_error}")
                     changed = True
-
     if changed:
         save_users(users)
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
-
     app.add_handler(ChatJoinRequestHandler(join_request))
-
-    app.job_queue.run_repeating(
-        check_members,
-        interval=15,
-        first=5
-    )
-
-    print("Bot started...")
-    print("Status check every 15 seconds...")
+    app.job_queue.run_repeating(check_members, interval=15, first=5)
+    print("✅ Bot started...")
     app.run_polling()
 
 if __name__ == "__main__":
