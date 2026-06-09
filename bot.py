@@ -2,7 +2,7 @@ import os
 from telegram import Update
 from telegram.ext import Application, ChatJoinRequestHandler, ContextTypes
 
-BOT_TOKEN = os.getenv("8562085984:AAGxwlLneP_8300_FEtH_X6jxsABaiuFmHU")
+BOT_TOKEN = os.getenv("")
 
 async def join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.chat_join_request.from_user
